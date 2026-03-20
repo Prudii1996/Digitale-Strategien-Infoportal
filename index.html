@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digitale Strategien Sachsen — Infoportal</title>
+  <meta name="description" content="Sieben Strategiepapiere des Freistaates Sachsen im Überblick. Zielkonflikte, Synergien und Reifegrad-Assessment.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0a0f1a; color: #fff; font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    select option { background: #1a2236; color: #fff; }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+    @media print {
+      body { background: #fff; color: #000; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.4/babel.min.js"></script>
+  <script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+
+// ─── DATA ───────────────────────────────────────────────────────────────────
+
+const STRATEGIES = [
+  { id: "digital", short: "Digitalstrategie", full: "sachsen digital 2030: besser, schneller, sicher", color: "#0097d1", icon: "◈", year: "2022", pages: 42, lead: "Sächsische Staatskanzlei",
+    dimensions: ["Gesellschaft", "Staat", "Wirtschaft & Arbeit", "Digitale Infrastruktur", "Bildung, Wissenschaft & Forschung"],
+    principles: ["Nachhaltigkeit", "Teilhabe", "Resilienz"],
+    keyGoals: ["16 Handlungsfelder über 5 Dimensionen", "Leitmotiv: besser, schneller, sicher", "Separate Aktionspläne zur Umsetzung", "Ressortübergreifender Ansatz mit breiter Beteiligung"] },
+  { id: "cyber", short: "Cyberstrategie", full: "Cybersicherheits-Strategie Sachsen", color: "#7b2d8e", icon: "◉", year: "2024", pages: 68, lead: "Sächsische Staatskanzlei / BfIS Land",
+    dimensions: ["Staatsverwaltung & Kommunen", "Gefahrenabwehr & Strafverfolgung", "Wirtschaft & KRITIS", "Digitalisierungsbezogene Kompetenz", "Fachkräfte", "Forschung & Hochschulen"],
+    principles: ["Grundrechtsschutz", "Demokratieprinzip", "Rechtsstaatsprinzip"],
+    keyGoals: ["Mind. 10.000 Bedienstete/Jahr sensibilisieren", "Adressatengerechte Fortbildung (Führungskräfte, IT-Stellen)", "SAX.CERT Analyse- und Reaktionskompetenz ausbauen", "IT-Notfallmanagement Land–Kommunen verzahnen", "NIS-2-Richtlinie umsetzen"] },
+  { id: "ki", short: "KI-Strategie", full: "Künstliche Intelligenz – Strategie für den Freistaat Sachsen", color: "#003d6b", icon: "◆", year: "2022", pages: 27, lead: "Sächsische Staatskanzlei",
+    dimensions: ["KI-Forschung", "KI in der Wirtschaft", "KI in der Verwaltung", "KI und Gesellschaft"],
+    principles: ["Ethik", "Verantwortung", "Menschenzentrierung"],
+    keyGoals: ["Sachsen als führenden KI-Standort entwickeln", "KI-Wissens- und Technologietransfer beschleunigen", "Ethischen und verantwortungsbewussten KI-Einsatz sichern", "Kompetenzen für KI-Nutzung stärken"] },
+  { id: "opensource", short: "Open-Source-Strategie", full: "Open Source-Strategie der Sächsischen Staatsverwaltung", color: "#2d6a30", icon: "◇", year: "2023", pages: 82, lead: "Sächsische Staatskanzlei",
+    dimensions: ["Strategische Lösungskonzeption", "Rahmenbedingungen", "Entscheidung & Umsetzungsbegleitung", "Kooperation & Vernetzung", "Wissen & Akzeptanz"],
+    principles: ["Digitale Souveränität", "Herstellerunabhängigkeit", "Transparenz"],
+    keyGoals: ["Ausrichtung auf Open Source bei Neubeschaffung", "Umsetzungspfad mit Bewertungsprozess etablieren", "Akzeptanz bei Beschäftigten schaffen", "Vernetzung mit Bund und Ländern", "Abhängigkeit von einzelnen Anbietern reduzieren"] },
+  { id: "innovation", short: "Innovationsstrategie", full: "Innovationsstrategie des Freistaates Sachsen (Fortschreibung)", color: "#e07000", icon: "◊", year: "2023", pages: 62, lead: "SMWA",
+    dimensions: ["Intelligente Spezialisierung", "Intelligente Diversifizierung", "Mensch als Innovationstreiber", "Von Invention zur Innovation", "Querschnittsziele"],
+    principles: ["Breiteres Innovationsverständnis", "Strategische Ausrichtung", "Innovationskultur"],
+    keyGoals: ["Basiskompetenzen und MINT-Bildung stärken", "Lebenslanges Lernen fördern", "Experimentierräume schaffen", "Technologietransfer als Hebel nutzen", "Innovationskraft aller Regionen stärken"] },
+  { id: "hochschule", short: "Hochschulstrategie", full: "Strategie der digitalen Transformation im Hochschulbereich", color: "#c41e3a", icon: "◈", year: "2022", pages: 43, lead: "SMWK / LRK Sachsen",
+    dimensions: ["Voraussetzungen", "Querschnittsaufgaben", "Lehre und Studium", "Forschung und Transfer", "Administrative Hochschulprozesse"],
+    principles: ["Kooperation", "Digitale Barrierefreiheit", "Informationssicherheit"],
+    keyGoals: ["Digitale Kompetenzen der Studierenden ausbauen", "Lehr-/Lerninfrastruktur modernisieren", "Forschungsdatenmanagement etablieren", "Administrative Prozesse digitalisieren", "Kompetenzen der Beschäftigten entwickeln"] },
+  { id: "verwaltung", short: "Verwaltungsstrategie", full: "Strategie zur digitalen Transformation der Sächsischen Staatsverwaltung", color: "#1a7a5a", icon: "◉", year: "2023", pages: 51, lead: "Sächsische Staatskanzlei / CIO",
+    dimensions: ["Strategische Steuerung", "Digitale Leistungserbringung", "Digitale Aufgabenerfüllung & Zusammenarbeit", "Digitale Kompetenzen", "Digitale Infrastruktur & Souveränität"],
+    principles: ["Ganzheitliche Transformation", "Partizipative Zusammenarbeit", "Kontinuierliche Verbesserung"],
+    keyGoals: ["CIO-gesteuerte ressortübergreifende Koordinierung", "Ende-zu-Ende-Digitalisierung aller Verwaltungsleistungen", "Digitale Kompetenzen bedarfsgerecht entwickeln", "HSF Meißen/SIVIM als Innovationspartner etablieren", "Digitale Souveränität durch Open Source stärken", "Betriebliches Kontinuitätsmanagement aufbauen"] }
+];
+
+const RELATIONS = [
+  { a: "digital", b: "cyber", type: "conflict", title: "Tempo vs. Sicherheit", desc: "Die Digitalstrategie fordert 'schneller', die Cyberstrategie umfassende Sicherheitsmaßnahmen mit jährlichen Schulungszielen (mind. 10.000 Bedienstete). Beschleunigte Einführung neuer Tools steht in Spannung zu gründlicher Sicherheitsschulung." },
+  { a: "digital", b: "cyber", type: "synergy", title: "Resilienz als gemeinsames Prinzip", desc: "Beide Strategien betonen Resilienz: Die Digitalstrategie als eines von drei Grundprinzipien, die Cyberstrategie durch IT-Notfallmanagement und betriebliches Kontinuitätsmanagement." },
+  { a: "digital", b: "ki", type: "synergy", title: "KI als Schlüsseltechnologie", desc: "Die Digitalstrategie identifiziert KI als eine der herausragenden sächsischen Kompetenzen. Die KI-Strategie konkretisiert dies mit Maßnahmen zur Forschung und zum Technologietransfer." },
+  { a: "digital", b: "opensource", type: "conflict", title: "Schnelle Digitalisierung vs. OS-Umstellung", desc: "Die Forderung nach schnellerer Digitalisierung kollidiert mit dem erhöhten Umstellungsaufwand bei der Migration weg von proprietärer Software." },
+  { a: "digital", b: "opensource", type: "synergy", title: "Digitale Souveränität", desc: "Beide Strategien streben geringere Abhängigkeit von einzelnen Technologieanbietern an." },
+  { a: "digital", b: "innovation", type: "synergy", title: "Innovationsökosystem", desc: "Die Digitalstrategie betont Digital Hubs und Branchennetzwerke. Die Innovationsstrategie konkretisiert dies mit Technologietransfer und Experimentierräumen." },
+  { a: "digital", b: "hochschule", type: "synergy", title: "Bildungsdimension", desc: "Die Digitalstrategie widmet Bildung, Wissenschaft & Forschung eine eigene Dimension mit fünf Handlungsfeldern, die die Hochschulstrategie operationalisiert." },
+  { a: "digital", b: "verwaltung", type: "synergy", title: "Verwaltung als Strategiesäule", desc: "Die Verwaltungsstrategie versteht sich explizit als Säule der Digitalstrategie und konkretisiert deren Dimension 'Staat'." },
+  { a: "cyber", b: "ki", type: "conflict", title: "KI-Einsatz vs. Sicherheitsrisiken", desc: "KI-Anwendungen erweitern die Angriffsfläche und bringen neue Sicherheitsrisiken (Datenschutz, Bias). Gleichzeitig kann KI bei der Bedrohungserkennung helfen." },
+  { a: "cyber", b: "opensource", type: "conflict", title: "OS-Sicherheit vs. proprietäre Zertifizierung", desc: "Open Source bietet Transparenz (Code-Einsicht), aber etablierte Sicherheitszertifizierungen existieren primär für proprietäre Produkte. Die Cyberstrategie fordert Sicherheitsgütesiegel des BSI." },
+  { a: "cyber", b: "opensource", type: "synergy", title: "Transparenz durch offenen Code", desc: "Open-Source-Software ermöglicht Sicherheitsaudits durch Code-Einsicht – ein Vorteil für die Cybersicherheit." },
+  { a: "cyber", b: "verwaltung", type: "synergy", title: "Informationssicherheit als Querschnittsaufgabe", desc: "Die Verwaltungsstrategie definiert Informationssicherheit als essenzielle Querschnittsaufgabe in allen Handlungsfeldern. Die Cyberstrategie liefert die operative Untersetzung." },
+  { a: "cyber", b: "innovation", type: "conflict", title: "Innovationsfreude vs. Sicherheitsbedenken", desc: "Experimentierräume und Innovation erfordern Offenheit; Cybersicherheit erfordert Kontrolle und Restriktion. Diese Spannung muss in jedem Innovationsvorhaben ausbalanciert werden." },
+  { a: "ki", b: "verwaltung", type: "synergy", title: "KI in der Verwaltungsinnovation", desc: "Die Verwaltungsstrategie fordert systematisches Innovationsmanagement (Kap. 6.4) und benennt die HSF/SIVIM als Partner. KI ist ein zentrales Innovationsthema für die Verwaltung." },
+  { a: "ki", b: "verwaltung", type: "conflict", title: "KI-Anspruch vs. Kompetenzrealität", desc: "Die Verwaltungsstrategie diagnostiziert, dass selbst Grundkompetenzen wie medienbruchfreies Arbeiten noch nicht etabliert sind. Der KI-Einsatz setzt ein deutlich höheres Kompetenzniveau voraus." },
+  { a: "ki", b: "innovation", type: "synergy", title: "KI als Innovationsmotor", desc: "Beide Strategien sehen KI als Treiber für wirtschaftliche und gesellschaftliche Innovation in Sachsen." },
+  { a: "opensource", b: "verwaltung", type: "synergy", title: "Souveränität durch OS", desc: "Die Verwaltungsstrategie fordert Wechselfähigkeit zwischen IT-Lösungen (Kap. 8.3). Die OS-Strategie liefert den konkreten Umsetzungspfad dafür." },
+  { a: "opensource", b: "verwaltung", type: "conflict", title: "OS-Umstieg vs. Grundkompetenz", desc: "Der Umstieg auf Open-Source-Alternativen erfordert Umschulung, während parallel digitale Grundkompetenzen (Kap. 7) erst aufgebaut werden müssen – ein kapazitäres Spannungsfeld." },
+  { a: "innovation", b: "verwaltung", type: "synergy", title: "HSF/SIVIM als Innovationskern", desc: "Die Verwaltungsstrategie benennt die HSF Meißen/SIVIM explizit als 'Kondensationskern' für Verwaltungsinnovation in Kooperation mit dem SID." },
+  { a: "innovation", b: "hochschule", type: "synergy", title: "Wissenstransfer", desc: "Beide Strategien betonen den Transfer zwischen Forschung und Praxis als Schlüssel für erfolgreiche Innovation." },
+  { a: "hochschule", b: "verwaltung", type: "conflict", title: "Geltungsbereich", desc: "Die Verwaltungsstrategie klammert Einrichtungen von Forschung, Wissenschaft, Lehre und Kunst ausdrücklich aus ihrem Geltungsbereich aus (Kap. 9) – ein Koordinationsproblem." },
+  { a: "hochschule", b: "verwaltung", type: "synergy", title: "Digitale Kompetenzen", desc: "Beide Strategien widmen digitalen Kompetenzen der Beschäftigten eigene Kapitel und fordern systematische Fortbildung." },
+];
+
+const BEHOERDEN = [
+  "Sächsische Staatskanzlei", "SMI – Staatsministerium des Innern", "SMF – Staatsministerium der Finanzen",
+  "SMK – Staatsministerium für Kultus", "SMWA – Staatsministerium für Wirtschaft, Arbeit und Verkehr",
+  "SMS – Staatsministerium für Soziales", "SMWK – Staatsministerium für Wissenschaft, Kultur und Tourismus",
+  "SMEKUL – Staatsministerium für Energie, Klimaschutz, Umwelt und Landwirtschaft",
+  "SMJusDEG – Staatsministerium der Justiz", "SMR – Staatsministerium für Regionalentwicklung",
+  "Nachgeordnete Behörde / Landesamt", "Kommunale Verwaltung (Landkreis / kreisfreie Stadt)", "Sonstige"
+];
+
+const ASSESSMENT_QUESTIONS = [
+  { cat: "Digitale Grundkompetenzen", strategy: "verwaltung", q: "Wie weit ist das Denken in durchgängig digitalen Prozessen bei den Beschäftigten etabliert?", levels: ["Überwiegend papierbasiert / analoge Gewohnheiten dominieren", "Einzelne Bereiche arbeiten digital, Medienbrüche sind häufig", "Mehrheitlich digitale Arbeitsweise, vereinzelte Medienbrüche", "Durchgängig digital und medienbruchfrei, kontinuierliche Verbesserung"] },
+  { cat: "Digitale Grundkompetenzen", strategy: "verwaltung", q: "Werden systematische Fortbildungen zu digitalen Kompetenzen angeboten?", levels: ["Keine oder nur vereinzelte Ad-hoc-Schulungen", "Einzelne Angebote vorhanden, aber nicht systematisch", "Regelmäßiges Fortbildungsprogramm mit digitalen Themen", "Bedarfsgerechtes Kompetenzstufenmodell mit Online- und Präsenzformaten"] },
+  { cat: "Cybersicherheit", strategy: "cyber", q: "Wie ist der Stand der Sensibilisierung für Informationssicherheit?", levels: ["Kaum Bewusstsein, keine Schulungsmaßnahmen", "Vereinzelte Maßnahmen (z. B. E-Learning bei Einstellung)", "Regelmäßige Sensibilisierung (jährlich), E-Learning-Angebote genutzt", "Adressatengerechte Formate, Live-Hacking, Führungskräfte-Spezialangebote, >80 % Teilnahme"] },
+  { cat: "Cybersicherheit", strategy: "cyber", q: "Existiert ein funktionierendes IT-Notfallmanagement?", levels: ["Kein IT-Notfallkonzept vorhanden", "Konzept existiert, aber nicht erprobt", "Konzept existiert, wurde mindestens einmal geübt", "Regelmäßige Übungen, Verzahnung mit übergeordneter Ebene, BCM nach BSI 200-4"] },
+  { cat: "KI-Readiness", strategy: "ki", q: "Wie weit ist das Verständnis von KI-Anwendungen in Ihrer Behörde?", levels: ["KI ist kein Thema, keine Erfahrung", "Grundlegendes Bewusstsein vorhanden, aber keine Anwendung", "Erste Pilotprojekte oder Erprobungen mit KI-Werkzeugen", "KI wird systematisch in Fachprozessen eingesetzt, ethische Leitlinien existieren"] },
+  { cat: "Open Source", strategy: "opensource", q: "Wie ist der Umgang mit Open-Source-Software in Ihrer Behörde?", levels: ["Ausschließlich proprietäre Software, kein Bewusstsein für OS", "Vereinzelt OS im Einsatz (z. B. Firefox, LibreOffice), aber nicht strategisch", "OS wird bei Neubeschaffung geprüft, Bewertungskriterien werden angewendet", "Systematischer OS-Einsatz, aktive Mitwirkung in OS-Communities"] },
+  { cat: "Prozessdigitalisierung", strategy: "verwaltung", q: "Wie weit sind die geschäftskritischen Verwaltungsprozesse digitalisiert?", levels: ["Überwiegend analoge Bearbeitung", "Teildigitalisierung (E-Akte eingeführt, aber Medienbrüche)", "Mehrheit der Prozesse Ende-zu-Ende digitalisiert", "Systematische Prozessoptimierung, Prozessbibliothek genutzt, Standardprozesse etabliert"] },
+  { cat: "Prozessdigitalisierung", strategy: "verwaltung", q: "Werden Verwaltungsleistungen online angeboten (OZG)?", levels: ["Keine oder kaum Online-Leistungen", "Einzelne Leistungen über Amt24 verfügbar", "Mehrheit der relevanten Leistungen online, aber nicht vollständig barrierefrei", "Vollständige OZG-Umsetzung, barrierefrei, nutzerfreundlich, in Leichter Sprache"] },
+  { cat: "Daten & Open Data", strategy: "verwaltung", q: "Werden offene Verwaltungsdaten bereitgestellt?", levels: ["Keine Datenbereitstellung", "Vereinzelt Datensätze im Open Data Portal", "Open-Data-Koordinator benannt, regelmäßige Bereitstellung", "Open-by-Default-Kultur, umfangreiche Bereitstellung, aktive Datennutzung"] },
+  { cat: "Innovation & Transformation", strategy: "innovation", q: "Wie wird Veränderungsmanagement bei Digitalisierungsvorhaben umgesetzt?", levels: ["Digitalisierung wird als reines IT-Projekt betrieben", "Veränderungsbedarfe werden erkannt, aber nicht systematisch adressiert", "Systematisches Change Management bei größeren Vorhaben", "Alle Transformationsvorhaben als ganzheitliche OE-Prozesse angelegt, Vorgehensmodell etabliert"] },
+  { cat: "Innovation & Transformation", strategy: "verwaltung", q: "Werden Innovationspotenziale systematisch identifiziert?", levels: ["Keine systematische Innovationsarbeit", "Vereinzelt innovative Ansätze, aber nicht institutionalisiert", "Kooperation mit Forschungseinrichtungen bei einzelnen Themen", "Systematisches Innovationsmanagement, Kooperation mit HSF/SIVIM und SID etabliert"] },
+  { cat: "Strategische Steuerung", strategy: "verwaltung", q: "Wie ist die digitale Transformation in Ihrer Behörde strategisch verankert?", levels: ["Keine Digitalisierungsstrategie vorhanden", "Einzelvorhaben ohne übergeordnete Strategie", "Behördeneigene Digitalstrategie vorhanden, an Landesstrategie orientiert", "Strategie mit messbaren Zielen, regelmäßiger Überprüfung und CIO-Koordinierung eingebettet"] },
+];
+
+const MATURITY_LABELS = ["Einstieg", "Entwicklung", "Etablierung", "Exzellenz"];
+const MATURITY_COLORS = ["#c0392b", "#e67e22", "#2980b9", "#1a7a5a"];
+
+// ─── COMPONENTS ─────────────────────────────────────────────────────────────
+
+function StrategyCard({ s, selected, onClick }) {
+  return (
+    <div onClick={onClick} style={{
+      background: selected ? s.color : "rgba(255,255,255,0.04)",
+      border: `2px solid ${selected ? s.color : "rgba(255,255,255,0.1)"}`,
+      borderRadius: 12, padding: "16px 18px", cursor: "pointer",
+      transition: "all 0.3s ease",
+      color: selected ? "#fff" : "rgba(255,255,255,0.8)",
+      transform: selected ? "scale(1.02)" : "scale(1)",
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <span style={{ fontSize: 24 }}>{s.icon}</span>
+        <span style={{ fontSize: 11, opacity: 0.7, background: "rgba(255,255,255,0.15)", padding: "2px 8px", borderRadius: 20 }}>{s.year}</span>
+      </div>
+      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4, fontFamily: "'DM Sans', sans-serif" }}>{s.short}</div>
+      <div style={{ fontSize: 11, opacity: 0.7, lineHeight: 1.4 }}>{s.full}</div>
+    </div>
+  );
+}
+
+function RelationCard({ rel, strategies }) {
+  const sA = strategies.find(s => s.id === rel.a);
+  const sB = strategies.find(s => s.id === rel.b);
+  const isConflict = rel.type === "conflict";
+  return (
+    <div style={{
+      background: isConflict ? "rgba(192,57,43,0.08)" : "rgba(26,122,90,0.08)",
+      border: `1px solid ${isConflict ? "rgba(192,57,43,0.25)" : "rgba(26,122,90,0.25)"}`,
+      borderRadius: 10, padding: 16, marginBottom: 12
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+        <span style={{ background: isConflict ? "#c0392b" : "#1a7a5a", color: "#fff", fontSize: 10, padding: "2px 10px", borderRadius: 20, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase" }}>
+          {isConflict ? "Zielkonflikt" : "Synergie"}
+        </span>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
+          <span style={{ color: sA.color, fontWeight: 600 }}>{sA.short}</span>
+          {" ↔ "}
+          <span style={{ color: sB.color, fontWeight: 600 }}>{sB.short}</span>
+        </span>
+      </div>
+      <div style={{ fontWeight: 700, fontSize: 14, color: "rgba(255,255,255,0.9)", marginBottom: 6, fontFamily: "'DM Sans', sans-serif" }}>{rel.title}</div>
+      <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.65)", lineHeight: 1.6 }}>{rel.desc}</div>
+    </div>
+  );
+}
+
+function RadarChart({ scores, categories }) {
+  const size = 260, cx = size/2, cy = size/2, r = 100;
+  const n = categories.length;
+  const points = (radius) => categories.map((_, i) => {
+    const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
+    return [cx + radius * Math.cos(angle), cy + radius * Math.sin(angle)];
+  });
+  const polygon = (pts) => pts.map(p => p.join(",")).join(" ");
+  const scorePoints = categories.map((_, i) => {
+    const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
+    const val = (scores[i] / 3) * r;
+    return [cx + val * Math.cos(angle), cy + val * Math.sin(angle)];
+  });
+
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} style={{ width: "100%", maxWidth: 300 }}>
+      {[0.25, 0.5, 0.75, 1].map((f, i) => (
+        <polygon key={i} points={polygon(points(r * f))} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={0.5} />
+      ))}
+      {points(r).map((p, i) => (
+        <line key={i} x1={cx} y1={cy} x2={p[0]} y2={p[1]} stroke="rgba(255,255,255,0.08)" strokeWidth={0.5} />
+      ))}
+      <polygon points={polygon(scorePoints)} fill="rgba(0,151,209,0.2)" stroke="#0097d1" strokeWidth={2} />
+      {scorePoints.map((p, i) => (
+        <circle key={i} cx={p[0]} cy={p[1]} r={4} fill={MATURITY_COLORS[scores[i]]} stroke="#fff" strokeWidth={1.5} />
+      ))}
+      {points(r + 18).map((p, i) => (
+        <text key={i} x={p[0]} y={p[1]} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.6)" fontSize={8} fontWeight={600}>
+          {categories[i].length > 12 ? categories[i].slice(0,11) + "…" : categories[i]}
+        </text>
+      ))}
+    </svg>
+  );
+}
+
+// ─── MAIN APP ───────────────────────────────────────────────────────────────
+
+function App() {
+  const [tab, setTab] = useState("overview");
+  const [selectedStrategies, setSelectedStrategies] = useState([]);
+  const [behoerde, setBehoerde] = useState("");
+  const [answers, setAnswers] = useState({});
+  const [showResults, setShowResults] = useState(false);
+
+  const toggleStrategy = (id) => {
+    setSelectedStrategies(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const filteredRelations = RELATIONS.filter(rel => {
+    if (selectedStrategies.length === 0) return true;
+    if (selectedStrategies.length === 1) return rel.a === selectedStrategies[0] || rel.b === selectedStrategies[0];
+    return selectedStrategies.includes(rel.a) && selectedStrategies.includes(rel.b);
+  });
+
+  const conflicts = filteredRelations.filter(r => r.type === "conflict");
+  const synergies = filteredRelations.filter(r => r.type === "synergy");
+
+  // Assessment scoring
+  const categoryScores = {};
+  const cats = [...new Set(ASSESSMENT_QUESTIONS.map(q => q.cat))];
+  cats.forEach(cat => {
+    const qs = ASSESSMENT_QUESTIONS.filter(q => q.cat === cat);
+    const answered = qs.filter(q => answers[q.q] !== undefined);
+    if (answered.length > 0) {
+      categoryScores[cat] = Math.round(answered.reduce((sum, q) => sum + answers[q.q], 0) / answered.length);
+    }
+  });
+  const allAnswered = Object.keys(answers).length === ASSESSMENT_QUESTIONS.length;
+  const overallScore = allAnswered ? Math.round(Object.values(categoryScores).reduce((a,b) => a+b, 0) / cats.length) : null;
+
+  return (
+    <div style={{
+      minHeight: "100vh", background: "#0a0f1a",
+      fontFamily: "'DM Sans', 'Segoe UI', system-ui, sans-serif", color: "#fff",
+    }}>
+      {/* Header */}
+      <div style={{
+        background: "linear-gradient(135deg, #0a0f1a 0%, #162032 50%, #0a1628 100%)",
+        borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "28px 24px 20px",
+      }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 8, fontWeight: 700 }}>Freistaat Sachsen</div>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, margin: 0, marginBottom: 6, lineHeight: 1.2,
+            background: "linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.7) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            Digitale Strategien — Infoportal
+          </h1>
+          <p style={{ margin: 0, fontSize: 13, color: "rgba(255,255,255,0.45)", maxWidth: 600 }}>
+            Sieben Strategiepapiere im Überblick. Zielkonflikte und Synergien erkennen. Ihren Reifegrad einschätzen.
+          </p>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <div style={{ background: "rgba(255,255,255,0.02)", borderBottom: "1px solid rgba(255,255,255,0.06)", position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(20px)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", gap: 0, padding: "0 24px", overflowX: "auto" }}>
+          {[
+            { id: "overview", label: "Strategieübersicht" },
+            { id: "compare", label: "Konflikte & Synergien" },
+            { id: "assess", label: "Wo steht Ihre Behörde?" },
+          ].map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{
+              background: "none", border: "none", color: tab === t.id ? "#0097d1" : "rgba(255,255,255,0.4)",
+              padding: "14px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+              borderBottom: tab === t.id ? "2px solid #0097d1" : "2px solid transparent",
+              transition: "all 0.2s", whiteSpace: "nowrap", fontFamily: "inherit",
+            }}>{t.label}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 24px 60px" }}>
+
+        {/* TAB: Overview */}
+        {tab === "overview" && (
+          <div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16, marginBottom: 32 }}>
+              {STRATEGIES.map(s => (
+                <div key={s.id} style={{
+                  background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 14, overflow: "hidden", transition: "all 0.3s",
+                }}>
+                  <div style={{ height: 4, background: s.color }} />
+                  <div style={{ padding: "18px 20px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 10 }}>
+                      <span style={{ fontSize: 28 }}>{s.icon}</span>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>{s.year} · {s.pages} Seiten</div>
+                        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>{s.lead}</div>
+                      </div>
+                    </div>
+                    <h3 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 17, fontWeight: 700, margin: "0 0 4px", color: s.color }}>{s.short}</h3>
+                    <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", margin: "0 0 14px", lineHeight: 1.4 }}>{s.full}</p>
+
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Grundprinzipien</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                        {s.principles.map(p => (
+                          <span key={p} style={{ fontSize: 10, background: `${s.color}22`, color: s.color, padding: "2px 8px", borderRadius: 20, border: `1px solid ${s.color}44` }}>{p}</span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Dimensionen / Handlungsfelder</div>
+                      {s.dimensions.map(d => (
+                        <div key={d} style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", padding: "2px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>{d}</div>
+                      ))}
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>Kernziele</div>
+                      {s.keyGoals.map(g => (
+                        <div key={g} style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", padding: "3px 0 3px 12px", position: "relative", lineHeight: 1.4 }}>
+                          <span style={{ position: "absolute", left: 0, color: s.color }}>›</span>{g}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB: Compare */}
+        {tab === "compare" && (
+          <div>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 16 }}>
+              Wählen Sie Strategien aus, um Zielkonflikte und Synergien zwischen ihnen zu sehen. Keine Auswahl = alle anzeigen.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10, marginBottom: 28 }}>
+              {STRATEGIES.map(s => (
+                <StrategyCard key={s.id} s={s} selected={selectedStrategies.includes(s.id)} onClick={() => toggleStrategy(s.id)} />
+              ))}
+            </div>
+
+            <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
+              <div style={{ background: "rgba(192,57,43,0.15)", padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                ⚡ {conflicts.length} Zielkonflikt{conflicts.length !== 1 ? "e" : ""}
+              </div>
+              <div style={{ background: "rgba(26,122,90,0.15)", padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                🤝 {synergies.length} Synergie{synergies.length !== 1 ? "n" : ""}
+              </div>
+            </div>
+
+            {conflicts.length > 0 && (
+              <div style={{ marginBottom: 24 }}>
+                <h3 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 700, color: "#e74c3c", marginBottom: 12 }}>Zielkonflikte</h3>
+                {conflicts.map((rel, i) => <RelationCard key={i} rel={rel} strategies={STRATEGIES} />)}
+              </div>
+            )}
+            {synergies.length > 0 && (
+              <div>
+                <h3 style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 16, fontWeight: 700, color: "#1a7a5a", marginBottom: 12 }}>Synergien</h3>
+                {synergies.map((rel, i) => <RelationCard key={i} rel={rel} strategies={STRATEGIES} />)}
+              </div>
+            )}
+            {filteredRelations.length === 0 && (
+              <div style={{ textAlign: "center", padding: 40, color: "rgba(255,255,255,0.3)" }}>
+                Keine Relationen für diese Auswahl gefunden.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB: Assessment */}
+        {tab === "assess" && (
+          <div>
+            <div style={{
+              background: "linear-gradient(135deg, rgba(0,151,209,0.08) 0%, rgba(0,61,107,0.08) 100%)",
+              border: "1px solid rgba(0,151,209,0.15)", borderRadius: 14, padding: 24, marginBottom: 28
+            }}>
+              <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, margin: "0 0 8px", fontWeight: 400 }}>Wo steht Ihre Behörde?</h2>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", margin: "0 0 16px", lineHeight: 1.6 }}>
+                Beantworten Sie die folgenden Fragen, um den digitalen Reifegrad Ihrer Behörde einzuschätzen.
+                Die Fragen und Reifegradstufen sind aus den überprüfbaren Indikatoren der sieben Strategien abgeleitet.
+              </p>
+              <div style={{ marginBottom: 8 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.5)", display: "block", marginBottom: 6 }}>Behörde / Ministerium</label>
+                <select value={behoerde} onChange={e => setBehoerde(e.target.value)} style={{
+                  width: "100%", maxWidth: 500, padding: "10px 14px", borderRadius: 8,
+                  background: "#1a2236", border: "1px solid rgba(255,255,255,0.18)",
+                  color: "#fff", fontSize: 13, fontFamily: "inherit", outline: "none",
+                  colorScheme: "dark",
+                }}>
+                  <option value="" style={{ background: "#1a2236", color: "#ccc" }}>— Bitte auswählen —</option>
+                  {BEHOERDEN.map(b => <option key={b} value={b} style={{ background: "#1a2236", color: "#fff" }}>{b}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {behoerde && (
+              <div>
+                {cats.map(cat => (
+                  <div key={cat} style={{ marginBottom: 28 }}>
+                    <h3 style={{
+                      fontFamily: "'DM Sans', sans-serif", fontSize: 15, fontWeight: 700,
+                      color: "rgba(255,255,255,0.8)", marginBottom: 12,
+                      paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,0.06)"
+                    }}>
+                      {cat}
+                      <span style={{ fontSize: 10, fontWeight: 400, color: "rgba(255,255,255,0.3)", marginLeft: 8 }}>
+                        (Quelle: {STRATEGIES.find(s => s.id === ASSESSMENT_QUESTIONS.find(q => q.cat === cat).strategy)?.short})
+                      </span>
+                    </h3>
+                    {ASSESSMENT_QUESTIONS.filter(q => q.cat === cat).map((q, qi) => (
+                      <div key={qi} style={{ marginBottom: 18, paddingLeft: 12, borderLeft: `2px solid ${answers[q.q] !== undefined ? MATURITY_COLORS[answers[q.q]] : "rgba(255,255,255,0.06)"}` }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.75)", marginBottom: 8 }}>{q.q}</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          {q.levels.map((level, li) => (
+                            <label key={li} style={{
+                              display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 12px", borderRadius: 8, cursor: "pointer",
+                              background: answers[q.q] === li ? `${MATURITY_COLORS[li]}18` : "transparent",
+                              border: answers[q.q] === li ? `1px solid ${MATURITY_COLORS[li]}44` : "1px solid transparent",
+                              transition: "all 0.2s",
+                            }}>
+                              <input type="radio" name={q.q} checked={answers[q.q] === li} onChange={() => setAnswers(prev => ({...prev, [q.q]: li}))}
+                                style={{ marginTop: 2, accentColor: MATURITY_COLORS[li] }} />
+                              <div>
+                                <span style={{ fontSize: 9, fontWeight: 700, color: MATURITY_COLORS[li], textTransform: "uppercase", letterSpacing: 0.5 }}>
+                                  Stufe {li + 1}: {MATURITY_LABELS[li]}
+                                </span>
+                                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", lineHeight: 1.4 }}>{level}</div>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+
+                {/* Results */}
+                {Object.keys(answers).length > 0 && (
+                  <div style={{
+                    background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: 14, padding: 24, marginTop: 32
+                  }}>
+                    <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, fontWeight: 400, marginBottom: 4 }}>
+                      Ihr Reifegrad-Profil
+                      {behoerde && <span style={{ fontSize: 13, fontWeight: 400, color: "rgba(255,255,255,0.4)" }}> — {behoerde}</span>}
+                    </h3>
+                    <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 20 }}>
+                      {allAnswered ? "Alle Fragen beantwortet." : `${Object.keys(answers).length} von ${ASSESSMENT_QUESTIONS.length} Fragen beantwortet.`}
+                    </p>
+
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 24, alignItems: "center", marginBottom: 24 }}>
+                      <RadarChart scores={cats.map(c => categoryScores[c] ?? 0)} categories={cats} />
+                      <div style={{ flex: 1, minWidth: 250 }}>
+                        {cats.map(cat => (
+                          <div key={cat} style={{ marginBottom: 12 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                              <span style={{ color: "rgba(255,255,255,0.7)", fontWeight: 600 }}>{cat}</span>
+                              <span style={{ color: MATURITY_COLORS[categoryScores[cat] ?? 0], fontWeight: 700 }}>
+                                {categoryScores[cat] !== undefined ? MATURITY_LABELS[categoryScores[cat]] : "—"}
+                              </span>
+                            </div>
+                            <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 3 }}>
+                              <div style={{
+                                height: "100%", borderRadius: 3, transition: "width 0.5s ease",
+                                width: categoryScores[cat] !== undefined ? `${((categoryScores[cat] + 1) / 4) * 100}%` : "0%",
+                                background: MATURITY_COLORS[categoryScores[cat] ?? 0],
+                              }} />
+                            </div>
+                          </div>
+                        ))}
+                        {overallScore !== null && (
+                          <div style={{
+                            marginTop: 16, padding: 14, borderRadius: 10,
+                            background: `${MATURITY_COLORS[overallScore]}15`,
+                            border: `1px solid ${MATURITY_COLORS[overallScore]}33`,
+                          }}>
+                            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginBottom: 2 }}>Gesamtreifegrad</div>
+                            <div style={{ fontSize: 22, fontWeight: 700, color: MATURITY_COLORS[overallScore], fontFamily: "'DM Serif Display', serif" }}>
+                              {MATURITY_LABELS[overallScore]}
+                            </div>
+                            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>
+                              {overallScore === 0 && "Ihre Behörde steht am Anfang der digitalen Transformation. Empfehlung: Starten Sie mit digitalen Grundkompetenzen und Cybersicherheitssensibilisierung."}
+                              {overallScore === 1 && "Einzelne Bereiche sind auf dem Weg. Empfehlung: Systematisieren Sie die Fortbildung und etablieren Sie Change Management bei Digitalisierungsvorhaben."}
+                              {overallScore === 2 && "Gute Grundlagen vorhanden. Empfehlung: Vertiefen Sie KI-Kompetenz, Open-Source-Readiness und bauen Sie systematisches Innovationsmanagement auf."}
+                              {overallScore === 3 && "Ihr Reifegrad ist hoch. Empfehlung: Teilen Sie Ihre Erfahrungen, wirken Sie als Vorbild und treiben Sie die Kooperation im HSF/SIVIM-SID-Dreieck voran."}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {!behoerde && (
+              <div style={{ textAlign: "center", padding: 60, color: "rgba(255,255,255,0.25)" }}>
+                Bitte wählen Sie zunächst Ihre Behörde aus, um mit der Einschätzung zu beginnen.
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+  </script>
+</body>
+</html>
