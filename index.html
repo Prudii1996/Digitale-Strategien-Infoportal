@@ -93,7 +93,7 @@ const BEHOERDEN = [
   "SMS – Staatsministerium für Soziales", "SMWK – Staatsministerium für Wissenschaft, Kultur und Tourismus",
   "SMEKUL – Staatsministerium für Energie, Klimaschutz, Umwelt und Landwirtschaft",
   "SMJusDEG – Staatsministerium der Justiz", "SMR – Staatsministerium für Regionalentwicklung",
-  "Nachgeordnete Behörde / Landesamt", "Kommunale Verwaltung (Landkreis / kreisfreie Stadt)", "Sonstige"
+  "Nachgeordnete Behörde / Landesamt", "Kommunale Verwaltung (Landkreis / kreisfreie Stadt)"
 ];
 
 const ASSESSMENT_QUESTIONS = [
@@ -203,8 +203,12 @@ function App() {
   const [tab, setTab] = useState("overview");
   const [selectedStrategies, setSelectedStrategies] = useState([]);
   const [behoerde, setBehoerde] = useState("");
+  const [behoerdeDetail, setBehoerdeDetail] = useState("");
   const [answers, setAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
+
+  const needsDetail = behoerde === "Nachgeordnete Behörde / Landesamt" || behoerde === "Kommunale Verwaltung (Landkreis / kreisfreie Stadt)";
+  const behoerdeDisplay = needsDetail && behoerdeDetail ? `${behoerdeDetail} (${behoerde})` : behoerde;
 
   const toggleStrategy = (id) => {
     setSelectedStrategies(prev =>
@@ -233,6 +237,56 @@ function App() {
   });
   const allAnswered = Object.keys(answers).length === ASSESSMENT_QUESTIONS.length;
   const overallScore = allAnswered ? Math.round(Object.values(categoryScores).reduce((a,b) => a+b, 0) / cats.length) : null;
+
+  const exportResults = () => {
+    const now = new Date().toLocaleDateString("de-DE", { year: "numeric", month: "long", day: "numeric" });
+    const empfehlungen = {
+      0: "Ihre Behörde steht am Anfang der digitalen Transformation. Empfehlung: Starten Sie mit digitalen Grundkompetenzen und Cybersicherheitssensibilisierung.",
+      1: "Einzelne Bereiche sind auf dem Weg. Empfehlung: Systematisieren Sie die Fortbildung und etablieren Sie Change Management bei Digitalisierungsvorhaben.",
+      2: "Gute Grundlagen vorhanden. Empfehlung: Vertiefen Sie KI-Kompetenz, Open-Source-Readiness und bauen Sie systematisches Innovationsmanagement auf.",
+      3: "Ihr Reifegrad ist hoch. Empfehlung: Teilen Sie Ihre Erfahrungen, wirken Sie als Vorbild und treiben Sie die Kooperation im HSF/SIVIM-SID-Dreieck voran."
+    };
+    const detailRows = ASSESSMENT_QUESTIONS.map(q => {
+      const val = answers[q.q];
+      const source = STRATEGIES.find(s => s.id === q.strategy)?.short || "";
+      return `<tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e0e0e0;font-size:13px;color:#333">${q.cat}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e0e0e0;font-size:12px;color:#555">${q.q}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e0e0e0;font-size:12px;text-align:center;font-weight:700;color:${val !== undefined ? MATURITY_COLORS[val] : '#999'}">${val !== undefined ? MATURITY_LABELS[val] : "—"}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e0e0e0;font-size:11px;color:#777">${val !== undefined ? q.levels[val] : "—"}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e0e0e0;font-size:11px;color:#999">${source}</td>
+      </tr>`;
+    }).join("");
+    const catSummary = cats.map(cat => {
+      const sc = categoryScores[cat];
+      return `<tr>
+        <td style="padding:6px 10px;font-weight:600;font-size:13px">${cat}</td>
+        <td style="padding:6px 10px;text-align:center;font-weight:700;color:${sc !== undefined ? MATURITY_COLORS[sc] : '#999'}">${sc !== undefined ? `Stufe ${sc+1}: ${MATURITY_LABELS[sc]}` : "—"}</td>
+      </tr>`;
+    }).join("");
+    const html = `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><title>Reifegrad-Ergebnis – ${behoerdeDisplay}</title>
+    <style>@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}body{font-family:'Segoe UI',Arial,sans-serif;margin:40px;color:#222;max-width:1000px}h1{font-size:22px;color:#1F4E79;margin-bottom:4px}h2{font-size:16px;color:#2E75B6;margin-top:28px;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #e8e8e8}table{border-collapse:collapse;width:100%}th{background:#1F4E79;color:#fff;padding:8px 10px;font-size:12px;text-align:left}.overall{background:#f0f7fb;border:2px solid #2E75B6;border-radius:10px;padding:20px;margin:20px 0}.meta{color:#888;font-size:12px;margin-bottom:24px}.footer{margin-top:32px;padding-top:12px;border-top:1px solid #ddd;font-size:11px;color:#aaa}</style></head>
+    <body>
+      <h1>Reifegrad-Ergebnis: Digitale Transformation</h1>
+      <p class="meta"><strong>${behoerdeDisplay}</strong> · Erhoben am ${now}</p>
+      ${overallScore !== null ? `<div class="overall">
+        <div style="font-size:13px;color:#666;margin-bottom:4px">Gesamtreifegrad</div>
+        <div style="font-size:26px;font-weight:700;color:${MATURITY_COLORS[overallScore]}">Stufe ${overallScore+1}: ${MATURITY_LABELS[overallScore]}</div>
+        <div style="font-size:13px;color:#555;margin-top:8px">${empfehlungen[overallScore]}</div>
+      </div>` : ""}
+      <h2>Ergebnis nach Kategorien</h2>
+      <table><thead><tr><th>Kategorie</th><th style="text-align:center">Reifegrad</th></tr></thead><tbody>${catSummary}</tbody></table>
+      <h2>Detailergebnisse</h2>
+      <table><thead><tr><th>Kategorie</th><th>Frage</th><th style="text-align:center">Stufe</th><th>Beschreibung</th><th>Quelle</th></tr></thead><tbody>${detailRows}</tbody></table>
+      <div class="footer">
+        Erstellt mit dem Strategieportal Digitale Strategien Sachsen · Datengrundlage: Sieben Strategiepapiere des Freistaates Sachsen · Analyse: HSF Meißen
+      </div>
+      <script>window.onload=function(){window.print()}<\/script>
+    </body></html>`;
+    const w = window.open("", "_blank");
+    w.document.write(html);
+    w.document.close();
+  };
 
   return (
     <div style={{
@@ -384,7 +438,7 @@ function App() {
               </p>
               <div style={{ marginBottom: 8 }}>
                 <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.5)", display: "block", marginBottom: 6 }}>Behörde / Ministerium</label>
-                <select value={behoerde} onChange={e => setBehoerde(e.target.value)} style={{
+                <select value={behoerde} onChange={e => { setBehoerde(e.target.value); setBehoerdeDetail(""); }} style={{
                   width: "100%", maxWidth: 500, padding: "10px 14px", borderRadius: 8,
                   background: "#1a2236", border: "1px solid rgba(255,255,255,0.18)",
                   color: "#fff", fontSize: 13, fontFamily: "inherit", outline: "none",
@@ -393,10 +447,22 @@ function App() {
                   <option value="" style={{ background: "#1a2236", color: "#ccc" }}>— Bitte auswählen —</option>
                   {BEHOERDEN.map(b => <option key={b} value={b} style={{ background: "#1a2236", color: "#fff" }}>{b}</option>)}
                 </select>
+                {needsDetail && (
+                  <div style={{ marginTop: 10 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.5)", display: "block", marginBottom: 6 }}>Bezeichnung Ihrer Behörde</label>
+                    <input type="text" value={behoerdeDetail} onChange={e => setBehoerdeDetail(e.target.value)}
+                      placeholder={behoerde.includes("Kommunale") ? "z. B. Landratsamt Meißen" : "z. B. Landesamt für Steuern und Finanzen"}
+                      style={{
+                        width: "100%", maxWidth: 500, padding: "10px 14px", borderRadius: 8,
+                        background: "#1a2236", border: "1px solid rgba(255,255,255,0.18)",
+                        color: "#fff", fontSize: 13, fontFamily: "inherit", outline: "none",
+                      }} />
+                  </div>
+                )}
               </div>
             </div>
 
-            {behoerde && (
+            {behoerde && (!needsDetail || behoerdeDetail) && (
               <div>
                 {cats.map(cat => (
                   <div key={cat} style={{ marginBottom: 28 }}>
@@ -445,7 +511,7 @@ function App() {
                   }}>
                     <h3 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, fontWeight: 400, marginBottom: 4 }}>
                       Ihr Reifegrad-Profil
-                      {behoerde && <span style={{ fontSize: 13, fontWeight: 400, color: "rgba(255,255,255,0.4)" }}> — {behoerde}</span>}
+                      {behoerdeDisplay && <span style={{ fontSize: 13, fontWeight: 400, color: "rgba(255,255,255,0.4)" }}> — {behoerdeDisplay}</span>}
                     </h3>
                     <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 20 }}>
                       {allAnswered ? "Alle Fragen beantwortet." : `${Object.keys(answers).length} von ${ASSESSMENT_QUESTIONS.length} Fragen beantwortet.`}
@@ -491,13 +557,26 @@ function App() {
                         )}
                       </div>
                     </div>
+                    <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 16, marginTop: 8, display: "flex", gap: 12 }}>
+                      <button onClick={exportResults} style={{
+                        background: "#1F4E79", color: "#fff", border: "none", borderRadius: 8,
+                        padding: "10px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                        fontFamily: "inherit", transition: "all 0.2s",
+                      }}
+                      onMouseOver={e => e.currentTarget.style.background = "#2E75B6"}
+                      onMouseOut={e => e.currentTarget.style.background = "#1F4E79"}
+                      >Ergebnis exportieren (PDF)</button>
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", alignSelf: "center" }}>
+                        Öffnet eine druckbare Ansicht mit allen Detailergebnissen
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>
             )}
-            {!behoerde && (
+            {(!behoerde || (needsDetail && !behoerdeDetail)) && (
               <div style={{ textAlign: "center", padding: 60, color: "rgba(255,255,255,0.25)" }}>
-                Bitte wählen Sie zunächst Ihre Behörde aus, um mit der Einschätzung zu beginnen.
+                {!behoerde ? "Bitte wählen Sie zunächst Ihre Behörde aus, um mit der Einschätzung zu beginnen." : "Bitte geben Sie die Bezeichnung Ihrer Behörde ein."}
               </div>
             )}
           </div>
